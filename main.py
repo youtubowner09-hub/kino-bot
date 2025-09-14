@@ -1,13 +1,10 @@
 # main.py
-# RENDER UCHUN TO'LIQ MOSLASHTIRILGAN VERSIYA (TIMEOUT BILAN)
+# YANA BIR BOR TO'G'IRLANGAN VERSIYA (TIMEOUT TO'G'RI JOYDA)
 
 import os
 import json
-# YANGI QO'SHILGAN IMPORTLAR: RENDER UCHUN WEB-SERVER
 from flask import Flask
 from threading import Thread
-
-# ASOSIY IMPORTLAR
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, ConversationHandler, CallbackQueryHandler
 
@@ -22,39 +19,29 @@ app = Flask('')
 @app.route('/')
 def home():
     return "Bot ishlamoqda"
-
 def run():
     app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
-
 def keep_alive():
     t = Thread(target=run)
     t.start()
 
 # --- MA'LUMOTLAR BAZASI BILAN ISHLASH ---
 def load_data():
-    if not os.path.exists(DB_FILE):
-        return {}
+    if not os.path.exists(DB_FILE): return {}
     try:
-        with open(DB_FILE, 'r') as f:
-            return json.load(f)
-    except json.JSONDecodeError:
-        return {}
-
+        with open(DB_FILE, 'r') as f: return json.load(f)
+    except json.JSONDecodeError: return {}
 def save_data(data):
-    with open(DB_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
+    with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
 
 # --- A'ZOLIKNI TEKSHIRUVCHI FUNKSIYA ---
 def is_subscribed(user_id: int, context: CallbackContext) -> bool:
-    if user_id == ADMIN_ID:
-        return True
+    if user_id == ADMIN_ID: return True
     for channel in CHANNELS:
         try:
             member = context.bot.get_chat_member(chat_id=channel, user_id=user_id)
-            if member.status not in ['creator', 'administrator', 'member']:
-                return False
-        except Exception:
-            return False
+            if member.status not in ['creator', 'administrator', 'member']: return False
+        except Exception: return False
     return True
 
 # --- FOYDALANUVCHI FUNKSIYALARI ---
@@ -63,17 +50,10 @@ def start(update: Update, context: CallbackContext):
     if is_subscribed(user_id, context):
         update.message.reply_text("Assalomu alaykum! Kino kodini yuboring.")
     else:
-        buttons = []
-        for channel in CHANNELS:
-            link = f"https://t.me/{str(channel).replace('@', '')}"
-            buttons.append([InlineKeyboardButton("📢 Kanalga Obuna Bo'lish", url=link)])
+        buttons = [[InlineKeyboardButton("📢 Kanalga Obuna Bo'lish", url=f"https://t.me/{str(channel).replace('@', '')}")] for channel in CHANNELS]
         buttons.append([InlineKeyboardButton("✅ Tasdiqlash", callback_data="check_subscription")])
         reply_markup = InlineKeyboardMarkup(buttons)
-        update.message.reply_text(
-            f"Botdan to'liq foydalanish uchun, iltimos, {CHANNELS[0]} kanaliga obuna bo'ling:",
-            reply_markup=reply_markup
-        )
-
+        update.message.reply_text(f"Botdan to'liq foydalanish uchun, iltimos, {CHANNELS[0]} kanaliga obuna bo'ling:", reply_markup=reply_markup)
 def handle_code(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     if not is_subscribed(user_id, context):
@@ -86,7 +66,6 @@ def handle_code(update: Update, context: CallbackContext):
         update.message.reply_video(video=file_id, caption=f"Siz so'ragan kino (kod: {code})")
     else:
         update.message.reply_text("❌ Bunday kodga ega kino topilmadi.")
-
 def check_subscription_callback(update: Update, context: CallbackContext):
     query = update.callback_query
     user_id = query.from_user.id
@@ -98,8 +77,7 @@ def check_subscription_callback(update: Update, context: CallbackContext):
         query.answer("Siz hali kanalga obuna bo'lmadingiz.", show_alert=True)
 
 # --- ADMIN FUNKSIYALARI ---
-def check_admin(update: Update):
-    return update.message.from_user.id == ADMIN_ID
+def check_admin(update: Update): return update.message.from_user.id == ADMIN_ID
 MOVIE_FILE, MOVIE_CODE = range(2)
 def add_movie_start(update: Update, context: CallbackContext):
     if not check_admin(update): return ConversationHandler.END
@@ -133,23 +111,19 @@ def list_movies(update: Update, context: CallbackContext):
         update.message.reply_text("Hozircha botda kinolar mavjud emas.")
         return
     message = "Botdagi barcha kinolar:\n\n"
-    for code in db:
-        message += f"Kod: `{code}`\n"
+    for code in db: message += f"Kod: `{code}`\n"
     update.message.reply_text(message, parse_mode='Markdown')
 def delete_movie(update: Update, context: CallbackContext):
     if not check_admin(update): return
-    try:
-        code_to_delete = context.args[0]
+    try: code_to_delete = context.args[0]
     except (IndexError, ValueError):
-        update.message.reply_text("Namuna: /deletemovie 123")
-        return
+        update.message.reply_text("Namuna: /deletemovie 123"); return
     db = load_data()
     if code_to_delete in db:
         del db[code_to_delete]
         save_data(db)
         update.message.reply_text(f"✅ `{code_to_delete}` kodli kino o'chirildi.")
-    else:
-        update.message.reply_text("❌ Bunday kodga ega kino topilmadi.")
+    else: update.message.reply_text("❌ Bunday kodga ega kino topilmadi.")
 def cancel(update: Update, context: CallbackContext):
     update.message.reply_text("Amal bekor qilindi.")
     context.user_data.clear()
@@ -157,12 +131,8 @@ def cancel(update: Update, context: CallbackContext):
 
 # --- BOTNI ISHGA TUSHIRISH ---
 def main():
-    # RENDER UCHUN WEB-SERVERNI ISHGA TUSHIRAMIZ
     keep_alive()
-
-    # O'ZGARTIRILGAN QATOR: Katta fayllar uchun timeout qo'shildi
-    updater = Updater(TOKEN, use_context=True, timeout=30, read_timeout=30)
-    
+    updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
     add_movie_handler = ConversationHandler(
         entry_points=[CommandHandler('addmovie', add_movie_start)],
@@ -178,7 +148,10 @@ def main():
     dp.add_handler(add_movie_handler)
     dp.add_handler(CallbackQueryHandler(check_subscription_callback, pattern='check_subscription'))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_code))
-    updater.start_polling()
+    
+    # TO'G'RI JOYGA QO'SHILGAN TIMEOUT
+    updater.start_polling(timeout=30)
+    
     print("Bot ishga tushdi...")
     updater.idle()
 
