@@ -1,5 +1,5 @@
 # main.py
-# RENDER UCHUN TO'LIQ MOSLASHTIRILGAN VERSIYA
+# RENDER UCHUN TO'LIQ MOSLASHTIRILGAN VERSIYA (TIMEOUT BILAN)
 
 import os
 import json
@@ -160,7 +160,9 @@ def main():
     # RENDER UCHUN WEB-SERVERNI ISHGA TUSHIRAMIZ
     keep_alive()
 
-    updater = Updater(TOKEN, use_context=True)
+    # O'ZGARTIRILGAN QATOR: Katta fayllar uchun timeout qo'shildi
+    updater = Updater(TOKEN, use_context=True, timeout=30, read_timeout=30)
+    
     dp = updater.dispatcher
     add_movie_handler = ConversationHandler(
         entry_points=[CommandHandler('addmovie', add_movie_start)],
